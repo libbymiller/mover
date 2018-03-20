@@ -6,6 +6,7 @@ The idea is that the beat detction will trigger servos to move for a moving radi
 
 Currently it just makes a blob move onscreen in time. Sort of.
  
+It's based on this: https://github.com/JMPerez/beats-audio-api/blob/gh-pages/script.js
 
 # Installation
 
