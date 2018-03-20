@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <script src="/websocket"></script>
+  <script src="lib/jquery-1.12.4.js"></script>
+  <script src="lib/jquery-ui.js"></script>
+  <title>External App</title>
+
+<style>
+.circle {
+    width: 200px;
+    height: 200px;
+    position:absolute;
+    left: 300px;
+    -webkit-border-radius: 100px;
+    -moz-border-radius: 100px;
+    border-radius: 100px;
+    background: red;
+}
+
+#container{
+    background: white;
+    width:100%;
+}
+</style>
+
+</head>
+
+<body>
+  <h1>External App</h1>
+  <div id="container"></div>
+  <script src="external.js"></script>
+</body>
+
+  <script>
+    const ws = createWebsocket({ debug: true });
+    ws.subscribe('mover/event/beat-changed', function ({ topic, payload }) {
+      console.log('subscribe');
+      console.log(topic);
+      console.log(payload);
+      
+       var div = $('<div/>', {
+         class: 'circle',
+         css: {'top': "200px"}
+       }).appendTo('#container');
+
+       $(div).effect( "puff", {}, 500);
+    });
+  </script>
+</html>

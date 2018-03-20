@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <script src="/websocket"></script>
+  <title>Internal App</title>
+</head>
+
+<body>
+  <h1>Internal App</h1>
+  <audio class="media" id="music"></audio>
+</body>
+<script type="module">
+    import main from './internal.js';
+</script>
+<script type ="text/javascript">
+
+const ws = createWebsocket({ debug: true });
+
+//webaudio stuff is based roughly on https://github.com/JMPerez/beats-audio-api/blob/gh-pages/script.js
+
+var context = new (window.AudioContext || window.webkitAudioContext)(); // define audio context
+var analyser = context.createAnalyser();
+var audioElement = document.getElementById("music");
+
+audioElement.addEventListener("canplay", function() {
+
+    var source = context.createMediaElementSource(audioElement);
+
+    source.connect(analyser);
+
+    var lowpass = context.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 150; 
+    lowpass.Q.value = 1;
+
+    var highpass = context.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 100;
+    highpass.Q.value = 1;
+
+    var proc = context.createScriptProcessor(1024, 1, 1);
+    proc.onaudioprocess = detect_beats;
+
+    source.connect(lowpass);
+    lowpass.connect(highpass);
+    highpass.connect(analyser);
+    analyser.connect(proc);
+
+    // Connect the output of the analyser to the destination
+    proc.connect(context.destination);
+
+    // also send source to the destination so we hear it 
+    source.connect(context.destination);
+
+});
+
+
+// https://www.sitepoint.com/delay-sleep-pause-wait/
+
+function sleep(milliseconds) {
+  var start = new Date().getTime();
+  for (var i = 0; i < 1e7; i++) {
+    if ((new Date().getTime() - start) > milliseconds){
+      break;
+    }
+  }
+}
+
+
+function detect_beats() {
+
+// max out the size of the buffer
+
+    var fftS = 32768; 
+
+// trying to roughly match https://github.com/JMPerez/beats-audio-api/blob/gh-pages/script.js#L71
+
+    analyser.fftSize = fftS;
+    var bufferLength = analyser.frequencyBinCount; // half the FFT value
+    var dataArray = new Uint8Array(bufferLength); // create an array to store the data
+    analyser.getByteFrequencyData(dataArray);
+    var max = 0;
+
+    for(var i = 0; i < bufferLength; i++) {
+
+         var volume = Math.abs(dataArray[i]);
+         if (!max || (volume > max.volume)) {
+            var pos = Math.round(i/fftS);
+            max = {
+              position: i,
+              volume: volume
+            };
+         } 
+    }
+
+//only keep the loudish ones
+
+    if(max.volume > 200){
+       console.log(max.volume);
+       ws.publish({ topic: "mover/event/beat-changed"});
+
+//have a little nap so it doesn't go mad sending events
+
+       sleep(200);
+    }
+
+}
+
+</script>
+
+</html>
